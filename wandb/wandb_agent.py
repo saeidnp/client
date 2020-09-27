@@ -24,6 +24,7 @@ _INSTANCES = 0
 
 
 def _is_colab():
+    return False
     try:
         import google.colab  # noqa
 
@@ -182,18 +183,19 @@ class Agent(object):
             try:
                 thread.join()
             except KeyboardInterrupt:
-                wandb.termlog("Ctrl + C detected. Stopping sweep...")
-                self._stop_thread = True
-                try:
-                    thread.join(timeout=5)
-                except TimeoutError:
-                    _terminate_thread(thread)
-                if thread.isAlive():
-                    wandb.termlog("Failed to stop sweep thread.")
-                else:
-                    wandb.termlog("Done.")
-        except Exception:
-            wandb.termerror("Error joining sweep thread.")
+                wandb.termlog("Ctrl + C detected. Stopping sweep.")
+                _terminate_thread(thread)
+                # self._stop_thread = True
+                # try:
+                #     thread.join(timeout=5)
+                # except TimeoutError:
+                #     _terminate_thread(thread)
+                # if thread.isAlive():
+                #     wandb.termlog("Failed to stop sweep thread.")
+                # else:
+                #     wandb.termlog("Done.")
+        except Exception as e:
+            wandb.termerror("Error joining sweep thread. " + str(e))
 
 
 def agent(sweep_id, function=None, entity=None, project=None, count=None):
