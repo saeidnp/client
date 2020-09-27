@@ -7,17 +7,50 @@ Manage wandb agent.
 
 from __future__ import print_function
 
+import ctypes
+import inspect
 import os
 import socket
 import time
 import threading
-import multiprocessing
 
 import wandb
 from wandb import util
 from wandb import wandb_sdk
 from wandb.apis import InternalApi
 from wandb.lib import config_util
+
+
+_INSTANCES = 0
+
+
+def _is_colab():
+    try:
+        import google.colab  #noqa
+        return True
+    except ImportError:
+        return False
+
+def _terminate_thread(thread):
+    if not thread.isAlive():
+        return
+    tid = getattr(thread, "_thread_id", None)
+    if tid is None:
+        for k, v in threading._active.items():
+            if v is thread:
+                tid = k
+    if tid is None:
+        # This should never happen
+        return
+    print("Terminating thread: " + str(tid))
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid),
+                                                     ctypes.py_object(KeyboardInterrupt))
+    if res == 0:
+        # This should never happen
+        return
+    elif res != 1:
+        # Revert
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), None)
 
 
 class Job(object):
@@ -48,6 +81,7 @@ class Agent(object):
         # files = (glob_config, loc_config)
         self._api = InternalApi()
         self._agent_id = None
+        self._stop_thread = None
 
     def register(self):
         agent = self._api.register_agent(socket.gethostname(), sweep_id=self._sweep_id)
@@ -85,10 +119,10 @@ class Agent(object):
             if wandb.run:
                 wandb.join()
         except KeyboardInterrupt as e:
-            print("Keyboard interrupt", e)
+            wandb.termlog('Ctrl + C detected. Stopping sweep.')
             return True
         except Exception as e:
-            print("Problem", e)
+            wandb.termerror('Error running job: ' + str(e))
             return True
 
     def setup(self):
@@ -114,33 +148,51 @@ class Agent(object):
         self.setup()
         count = 0
         while True:
-            job = self.check_queue()
-            if not job:
-                time.sleep(10)
-                continue
-            if job.done():
+            try:
+                if self._stop_thread:
+                    return
+                job = self.check_queue()
+                if not job:
+                    time.sleep(10)
+                    if self._stop_thread:
+                        return
+                    continue
+                if job.done():
+                    return
+                count += 1
+                stop = self.run_job(job)
+                if stop:
+                    return
+                if self._count and count == self._count:
+                    return
+                time.sleep(5)
+            except KeyboardInterrupt:
                 return
-            count += 1
-            stop = self.run_job(job)
-            if stop:
-                return
-            if self._count and count == self._count:
-                return
-            time.sleep(5)
 
     def loop(self):
-        self._thread_body()
-        return
-        proc = multiprocessing.Process(target=self._thread_body)
-        proc.start()
+        
+        self._stop_thread = False
+        if not _is_colab():
+            self._thread_body()
+            return
+        thread = threading.Thread(target=self._thread_body, daemon=True)
+        thread.start()
         try:
             try:
-                proc.join()
+                thread.join()
             except KeyboardInterrupt:
-                wandb.termlog('Ctrl + C detected. Killing sweep process.')
-                proc.terminate()
+                wandb.termlog('Ctrl + C detected. Stopping sweep...')
+                self._stop_thread = True
+                try:
+                    thread.join(timeout=5)
+                except TimeoutError:
+                    _terminate_thread(thread)
+                if thread.isAlive():
+                    wandb.termlog("Failed to stop sweep thread.")
+                else:
+                    wandb.termlog('Done.')
         except Exception:
-            wandb.termerror("Error joining sweep process.")
+            wandb.termerror("Error joining sweep thread.")
 
 def agent(sweep_id, function=None, entity=None, project=None, count=None):
     """Generic agent entrypoint, used for CLI or jupyter.
@@ -152,6 +204,8 @@ def agent(sweep_id, function=None, entity=None, project=None, count=None):
         project (str, optional): W&B Project
         count (int, optional): the number of trials to run.
     """
+    global _INSTANCES
+    _INSTANCES += 1
     if function is None:
         raise Exception("function paramter is required")
     if not callable(function):
@@ -159,4 +213,11 @@ def agent(sweep_id, function=None, entity=None, project=None, count=None):
     agent = Agent(
         sweep_id, function=function, entity=entity, project=project, count=count,
     )
-    agent.loop()
+    try:
+        agent.loop()
+    finally:
+        _INSTANCES -= 1
+
+
+def _is_running():
+    return bool(_INSTANCES)
