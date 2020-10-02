@@ -15,15 +15,25 @@ class Dummy():
         compare_ops = ["lt", "le", "eq", "ne", "gt", "ge"]
         for op in compare_ops:
             setattr(self, "__{}__".format(op), lambda _: True)
+        self.___dict = {}
 
     def __getattr__(self, attr):
-        return Dummy()
+        try:
+            return object.__getattribute__(self, attr)
+        except AttributeError:
+            dummy = Dummy()
+            setattr(self, attr, dummy)
+            return dummy
 
     def __getitem__(self, key):
-        return Dummy()
+        if key in self.__dict:
+            return self.___dict[key]
+        dummy = Dummy()
+        self.___dict[key] = dummy
+        return dummy
 
     def __setitem__(self, key, value):
-        pass
+        self.___dict[key] = value
 
     def __call__(self, *args, **kwargs):
         return Dummy()
