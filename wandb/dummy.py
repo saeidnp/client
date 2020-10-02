@@ -11,11 +11,11 @@ class Dummy():
         self.__idiv__ = lambda *_: None
         unary_ops = ["neg", "pos", "abs", "invert", "complex", "int", "long", "float", "oct", "hex"]
         for op in unary_ops:
-            setattr(self, "__{}__".format(op), lambda : Dummy())
+            setattr(self, "__{}__".format(op), lambda: Dummy())
         compare_ops = ["lt", "le", "eq", "ne", "gt", "ge"]
         for op in compare_ops:
             setattr(self, "__{}__".format(op), lambda _: True)
-        
+
     def __getattr__(self, attr):
         return Dummy()
 
