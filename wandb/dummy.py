@@ -3,19 +3,127 @@ from types import ModuleType
 
 class Dummy():
     def __init__(self, *args, **kwargs):
-        binary_ops = ["add", "sub", "mul", "floordiv", "mod", "pow", "lshift", "rshift", "and", "xor", "or", "truediv"]
-        for op in binary_ops:
-            setattr(self, "__{}__".format(op), lambda *_: Dummy())
-        for i in range(len(binary_ops) - 1):
-            setattr(self, "__i{}__".format(binary_ops[i]), lambda *_: None)
-        self.__idiv__ = lambda *_: None
-        unary_ops = ["neg", "pos", "abs", "invert", "complex", "int", "long", "float", "oct", "hex"]
-        for op in unary_ops:
-            setattr(self, "__{}__".format(op), lambda: Dummy())
-        compare_ops = ["lt", "le", "eq", "ne", "gt", "ge"]
-        for op in compare_ops:
-            setattr(self, "__{}__".format(op), lambda _: True)
         self.___dict = {}
+
+    def __add__(self, other):
+        return Dummy()
+
+    def __sub__(self, other):
+        return Dummy()
+
+    def __mul__(self, other):
+        return Dummy()
+
+    def __truediv__(self, other):
+        return Dummy()
+
+    def __floordiv__(self, other):
+        return Dummy()
+
+    def __mod__(self, other):
+        return Dummy()
+
+    def __pow__(self, other, modulo=None):
+        return Dummy()
+
+    def __lshift__(self, other):
+        return Dummy()
+
+    def __rshift__(self, other):
+        return Dummy()
+
+    def __and__(self, other):
+        return Dummy()
+
+    def __xor__(self, other):
+        return Dummy()
+
+    def __or__(self, other):
+        return Dummy()
+
+    def __iadd__(self, other):
+        pass
+
+    def __isub__(self, other):
+        pass
+
+    def __imul__(self, other):
+        pass
+
+    def __idiv__(self, other):
+        pass
+
+    def __ifloordiv__(self, other):
+        pass
+
+    def __imod__(self, other):
+        pass
+
+    def __ipow__(self, other, modulo=None):
+        pass
+
+    def __ilshift__(self, other):
+        pass
+
+    def __irshift__(self, other):
+        pass
+
+    def __iand__(self, other):
+        pass
+
+    def __ixor__(self, other):
+        pass
+
+    def __ior__(self, other):
+        pass
+
+    def __neg__(self):
+        return Dummy()
+
+    def __pos__(self):
+        return Dummy()
+
+    def __abs__(self):
+        return Dummy()
+
+    def __invert__(self):
+        return Dummy()
+
+    def __complex__(self):
+        return 1 + 0j
+
+    def __int__(self):
+        return 1
+
+    def __long__(self):
+        return 1
+
+    def __float__(self):
+        return 1.0
+
+    def __oct__(self):
+        return oct(1)
+
+    def __hex__(self):
+        return hex(1)
+
+    def __lt__(self, other):
+        return True
+
+    def __le__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return True
+
+    def __ne__(self, other):
+        return True
+
+    def __gt__(self, other):
+        return True
+
+    def __ge__(self, other):
+        return True
 
     def __getattr__(self, attr):
         try:
@@ -26,7 +134,7 @@ class Dummy():
             return dummy
 
     def __getitem__(self, key):
-        if key in self.__dict:
+        if key in self.___dict:
             return self.___dict[key]
         dummy = Dummy()
         self.___dict[key] = dummy
