@@ -425,7 +425,7 @@ def init(
     save_code=None,
     id=None,
     settings: Union[Settings, Dict[str, Any], None] = None,
-) -> Run:
+) -> Union[Run, Dummy]:
     """Initialize a wandb Run.
 
     Args:
