@@ -164,16 +164,18 @@ class DummyModule(Dummy, ModuleType):
     pass
 
 
-def disable(globals_={}):
+def disable(globals_=None):
     import wandb
     wandb_module = wandb._wandb_module
     for m in sys.modules:
         if m == wandb_module or (m.startswith(wandb_module + ".") and not m.startswith(wandb_module + ".dummy")):
             sys.modules[m] = DummyModule()
-    for k, v in globals_.items():
-        m = getattr(v, '__module__', v.__name__ if isinstance(v, ModuleType) else '')
-        if m == wandb_module or (m.startswith(wandb_module + ".") and not m.startswith(wandb_module + ".dummy")):
-            globals_[k] = Dummy()
+    if globals_:
+        for k, v in globals_.items():
+            m = getattr(v, '__module__', v.__name__ if isinstance(v, ModuleType) else '')
+            if m == wandb_module or (m.startswith(wandb_module + ".") and not m.startswith(wandb_module + ".dummy")):
+                globals_[k] = Dummy()
+
     class ImportHook:
         def find_module(self, fullname, path=None):
             if fullname.startswith(wandb_module + "."):
