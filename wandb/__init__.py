@@ -82,7 +82,6 @@ else:
     from wandb.wandb_controller import sweep, controller
 
     from wandb import superagent
-    from wandb.jupyteragent import jupyteragent as _secretagent
 
     # from wandb.core import *
     from wandb.viz import visualize
