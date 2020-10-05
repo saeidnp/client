@@ -1061,7 +1061,9 @@ class Run(object):
         self._exit_code = exit_code
         try:
             self._on_finish()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as ki:
+            if wandb.wandb_agent._is_running():
+                raise ki
             wandb.termerror("Control-C detected -- Run data was not synced")
             if ipython._get_python_type() == "python":
                 os._exit(-1)
@@ -1092,8 +1094,9 @@ class Run(object):
 
     def _console_stop(self):
         self._restore()
-        self._output_writer.close()
-        self._output_writer = None
+        if self._output_writer:
+            self._output_writer.close()
+            self._output_writer = None
 
     def _on_start(self):
         # TODO: make offline mode in jupyter use HTML
