@@ -7,6 +7,7 @@ init.
 from __future__ import print_function
 
 import datetime
+import inspect
 import logging
 import os
 import time
@@ -16,6 +17,7 @@ import six
 import wandb
 from wandb import trigger
 from wandb.backend.backend import Backend
+from wandb.dummy import disable, Dummy
 from wandb.errors.error import UsageError
 from wandb.integration import sagemaker
 from wandb.integration.magic import magic_install
@@ -24,7 +26,7 @@ from wandb.util import sentry_exc
 
 from . import wandb_setup
 from .wandb_helper import parse_config
-from .wandb_run import Run, RunBase, RunDummy
+from .wandb_run import Run
 from .wandb_settings import Settings
 
 if wandb.TYPE_CHECKING:  # type: ignore
@@ -294,23 +296,13 @@ class _WandbInit(object):
         self._wl._early_logger_flush(logger)
 
     def init(self):
+        if self.settings._noop:
+            disable(inspect.stack()[1][0].f_globals)
+            return Dummy()
+
         trigger.call("on_init", **self.kwargs)
         s = self.settings
         config = self.config
-
-        if s._noop:
-            run = RunDummy()
-            module.set_global(
-                run=run,
-                config=run.config,
-                log=run.log,
-                summary=run.summary,
-                save=run.save,
-                restore=run.restore,
-                use_artifact=run.use_artifact,
-                log_artifact=run.log_artifact,
-            )
-            return run
 
         if s.reinit or (s._jupyter and s.reinit is not False):
             if len(self._wl._global_run_stack) > 0:
@@ -433,7 +425,7 @@ def init(
     save_code=None,
     id=None,
     settings: Union[Settings, Dict[str, Any], None] = None,
-) -> RunBase:
+) -> Run:
     """Initialize a wandb Run.
 
     Args:
@@ -448,6 +440,9 @@ def init(
         wandb Run object
 
     """
+    if mode == "noop":
+        disable(inspect.stack()[1][0].f_globals)
+        return Dummy()
     assert not wandb._IS_INTERNAL_PROCESS
     kwargs = locals()
     error_seen = None

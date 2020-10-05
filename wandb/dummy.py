@@ -1,3 +1,4 @@
+import sys
 from types import ModuleType
 
 
@@ -161,3 +162,26 @@ class Dummy():
 
 class DummyModule(Dummy, ModuleType):
     pass
+
+
+def disable(globals_={}):
+    import wandb
+    wandb_module = wandb._wandb_module
+    for m in sys.modules:
+        if m == wandb_module or (m.startswith(wandb_module + ".") and not m.startswith(wandb_module + ".dummy")):
+            sys.modules[m] = DummyModule()
+    for k, v in globals_.items():
+        m = getattr(v, '__module__', v.__name__ if isinstance(v, ModuleType) else '')
+        if m == wandb_module or (m.startswith(wandb_module + ".") and not m.startswith(wandb_module + ".dummy")):
+            globals_[k] = Dummy()
+    class ImportHook:
+        def find_module(self, fullname, path=None):
+            if fullname.startswith(wandb_module + "."):
+                return self
+
+        def load_module(self, fullname):
+            module = DummyModule()
+            sys.modules[fullname] = module
+            return module
+
+    sys.meta_path.insert(0, ImportHook())

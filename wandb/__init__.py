@@ -27,24 +27,12 @@ _wandb_module = 'wandb'
 import os
 import sys
 
-if os.environ.get("WANDB_MODE") == "noop":
-    from .dummy import Dummy, DummyModule
-    dummy_wandb = DummyModule()
-    dummy_wandb.__version__ = __version__
-    sys.modules["wandb"] = dummy_wandb
-    class ImportHook:
-        def find_module(self, fullname, path=None):
-            if fullname.startswith(_wandb_module + '.'):
-                return self
 
-        def load_module(self, fullname):
-            module = DummyModule()
-            sys.modules[fullname] = module
-            return module
-
-    sys.meta_path.insert(0, ImportHook())
-
+if os.environ.get("WANDB_MODE") == "noop":  # for magic
+    from .dummy import disable
+    disable()
 else:
+
     from wandb.errors import Error
 
     # This needs to be early as other modules call it.
