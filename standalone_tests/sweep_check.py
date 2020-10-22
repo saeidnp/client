@@ -30,7 +30,7 @@ def train(**kwargs):
         run_id = run.id
         print("SweepID", run.sweep_id)
         length = run.config.get("length", L)
-        epochs = run.config.get("epochs", 27)
+        epochs = run.config.get("epochs", 5)
         delay = run.config.get("delay", 0)
         for e in range(epochs):
             n = float(length) * (float(e+1) / epochs)
