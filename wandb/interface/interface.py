@@ -431,7 +431,7 @@ class BackendSender(object):
             record.control.local = local
         self.record_q.put(record)
 
-    def _communicate(self, rec, timeout=5, local=None):
+    def _communicate(self, rec, timeout=500, local=None):
         assert self._router
         future = self._router.send_and_receive(rec, local=local)
         return future.get(timeout)
