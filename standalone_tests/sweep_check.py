@@ -30,7 +30,7 @@ def train(**kwargs):
         run_id = run.id
         print("SweepID", run.sweep_id)
         length = run.config.get("length", L)
-        epochs = run.config.get("epochs", 5)
+        epochs = run.config.get("epochs", 27)
         delay = run.config.get("delay", 0)
         for e in range(epochs):
             n = float(length) * (float(e+1) / epochs)
@@ -142,7 +142,7 @@ def sweep_grid_hyperband(args):
             param1=dict(values=[4, 1, 0]),
             param2=dict(values=[1.5, 0.5, 0]),
             delay=dict(value=args.grid_hyper_delay or 1),
-            epochs=dict(value=27),
+            epochs=dict(value=5),
             ),
         early_terminate=dict(
             type="hyperband",
