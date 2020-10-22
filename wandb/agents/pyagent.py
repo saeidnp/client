@@ -96,10 +96,7 @@ class Agent(object):
         self._stopped_runs = set()
         self._exit_flag = False
         self._errored_runs = {}
-<<<<<<< HEAD
-=======
         self._start_time = time.time()
->>>>>>> fr_pyagent_stopping_fix
         self._lock = threading.Lock()
 
     def _register(self):
