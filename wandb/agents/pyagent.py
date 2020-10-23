@@ -97,7 +97,6 @@ class Agent(object):
         self._exit_flag = False
         self._errored_runs = {}
         self._start_time = time.time()
-        self._lock = threading.Lock()
 
     def _register(self):
         logger.debug("Agent._register()")
@@ -127,27 +126,24 @@ class Agent(object):
         self._register()
 
     def _run_status(self):
-        with self._lock:
-            run_status = {}
-            dead_runs = []
-            for k, v in self._run_threads.items():
-                if v.isAlive():
-                    run_status[k] = True
-                else:
-                    dead_runs.append(k)
-            # clean up dead runs
-            for k in dead_runs:
-                del self._run_threads[k]
-            return run_status
+        run_status = {}
+        dead_runs = []
+        for k, v in self._run_threads.items():
+            if v.isAlive():
+                run_status[k] = True
+            else:
+                dead_runs.append(k)
+        # clean up dead runs
+        for k in dead_runs:
+            del self._run_threads[k]
+        return run_status
 
     def _stop_run(self, run_id):
         logger.debug("Stopping run {}.".format(run_id))
         self._stopped_runs.add(run_id)
-        with self._lock:
-            thread = self._run_threads.get(run_id)
-            if thread:
-                _terminate_thread(thread)
-                del self._run_threads[run_id]
+        thread = self._run_threads.get(run_id)
+        if thread:
+            _terminate_thread(thread)
 
     def _stop_all_runs(self):
         logger.debug("Stopping all runs.")
@@ -238,9 +234,6 @@ class Agent(object):
                             )
                             self._exit_flag = True
                             return
-                    with self._lock:
-                        if run_id in self._run_threads:
-                            del self._run_threads[run_id]
                     if self._count and self._count == count:
                         logger.debug("Exiting main loop because max count reached.")
                         self._exit_flag = True
