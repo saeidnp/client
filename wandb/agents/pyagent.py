@@ -97,6 +97,7 @@ class Agent(object):
         self._exit_flag = False
         self._errored_runs = {}
         self._start_time = time.time()
+        self._lock = threading.Lock()
 
     def _register(self):
         logger.debug("Agent._register()")
@@ -126,17 +127,18 @@ class Agent(object):
         self._register()
 
     def _run_status(self):
-        run_status = {}
-        dead_runs = []
-        for k, v in self._run_threads.items():
-            if v.isAlive():
-                run_status[k] = True
-            else:
-                dead_runs.append(k)
-        # clean up dead runs
-        for k in dead_runs:
-            del self._run_threads[k]
-        return run_status
+        with self._lock:
+            run_status = {}
+            dead_runs = []
+            for k, v in self._run_threads.items():
+                if v.isAlive():
+                    run_status[k] = True
+                else:
+                    dead_runs.append(k)
+            # clean up dead runs
+            for k in dead_runs:
+                del self._run_threads[k]
+            return run_status
 
     def _stop_run(self, run_id):
         logger.debug("Stopping run {}.".format(run_id))
@@ -210,7 +212,8 @@ class Agent(object):
                     run_id = job.run_id
                     logger.debug("Spawning new thread for run {}.".format(run_id))
                     thread = threading.Thread(target=self._run_job, args=(job,))
-                    self._run_threads[run_id] = thread
+                    with self._lock:
+                        self._run_threads[run_id] = thread
                     thread.start()
                     thread.join()
                     logger.debug("Thread joined for run {}.".format(run_id))
