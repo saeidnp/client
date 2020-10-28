@@ -26,13 +26,17 @@ logger = logging.getLogger(__name__)
 
 
 def _terminate_thread(thread):
+    if hasattr(thread, "_terminated"):
+        return
     if not thread.is_alive():
         return
+    thread._terminated = True  # is_alive() might still return True
     tid = getattr(thread, "_thread_id", None)
     if tid is None:
         for k, v in threading._active.items():
             if v is thread:
                 tid = k
+                break
     if tid is None:
         # This should never happen
         return
@@ -141,20 +145,27 @@ class Agent(object):
             return run_status
 
     def _stop_run(self, run_id):
+        wandb.termlog("_stop_run({})".format(run_id))
         logger.debug("Stopping run {}.".format(run_id))
         self._stopped_runs.add(run_id)
-        thread = self._run_threads.get(run_id)
+        with self._lock:
+            thread = self._run_threads.pop(run_id)
         if thread:
             _terminate_thread(thread)
+        wandb.termlog("_stop_run({}) done".format(run_id))
 
     def _stop_all_runs(self):
+        wandb.termlog("_stop_all_runs()")
         logger.debug("Stopping all runs.")
         for run in list(self._run_threads.keys()):
             self._stop_run(run)
+        wandb.termlog("_stop_all_runs() done")
 
     def _exit(self):
+        wandb.termlog("_exit()")
         self._stop_all_runs()
         self._exit_flag = True
+        wandb.termlog("_exit() done")
         # _terminate_thread(self._main_thread)
 
     def _heartbeat(self):
@@ -168,13 +179,15 @@ class Agent(object):
                 continue
             job = Job(commands[0])
             logger.debug("Job received: {}".format(job))
+            wandb.termlog("heartbeat: Job received: {}".format(job))
             if job.type == "run":
                 self._queue.put(job)
             elif job.type == "stop":
                 self._stop_run(job.run_id)
             elif job.type == "exit":
-                self._exit()
-                return
+                self._queue.put(job)
+                # self._exit()
+                # return
             time.sleep(5)
 
     def _run_jobs_from_queue(self):  # noqa:C901
@@ -189,6 +202,11 @@ class Agent(object):
                 try:
                     try:
                         job = self._queue.get(timeout=5)
+                        if job.type == "exit":
+                            logger.debug("Exit command received.")
+                            wandb.termlog("Sweep Agent: Exiting.")
+                            self._exit()
+                            return
                         if self._exit_flag:
                             logger.debug("Exiting main loop due to exit flag.")
                             wandb.termlog("Sweep Agent: Exiting.")
