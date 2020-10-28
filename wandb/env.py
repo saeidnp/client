@@ -60,6 +60,7 @@ ANONYMOUS = "WANDB_ANONYMOUS"
 JUPYTER = "WANDB_JUPYTER"
 CONFIG_DIR = "WANDB_CONFIG_DIR"
 CACHE_DIR = "WANDB_CACHE_DIR"
+SACRED_ARGS = 'WANDB_SACRED_ARGS'
 
 # For testing, to be removed in future version
 USE_V1_ARTIFACTS = "_WANDB_USE_V1_ARTIFACTS"
@@ -288,6 +289,15 @@ def get_use_v1_artifacts(env=None):
     if env is None:
         env = os.environ
     val = env.get(USE_V1_ARTIFACTS, False)
+    return val
+
+
+def get_sacred_args(env=None):
+    if env is None:
+        env = os.environ
+    val = env.get(SACRED_ARGS, False)
+    if val == "false":
+        val=False
     return val
 
 

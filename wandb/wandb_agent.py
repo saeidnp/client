@@ -348,7 +348,10 @@ class Agent(object):
             (param, config["value"]) for param, config in command["args"].items()
         ]
         flags_no_hyphens = ["{}={}".format(param, value) for param, value in flags_list]
-        flags = ["--" + flag for flag in flags_no_hyphens]
+        if wandb.env.get_sacred_args():
+            flags = ["with"] + [flag for flag in flags_no_hyphens]
+        else:
+            flags = ["--" + flag for flag in flags_no_hyphens]
         flags_dict = dict(flags_list)
         flags_json = json.dumps(flags_dict)
 
